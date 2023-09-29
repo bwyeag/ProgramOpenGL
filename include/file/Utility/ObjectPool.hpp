@@ -5,8 +5,7 @@
 #include <cstdint>
 #include <new>
 #include <iostream>
-
-#define ERROR(type,info) std::cerr << "[ERROR][" << type << "]file:" << __FILE__ << ";line:" << __LINE__ << "|info:" << info << std::endl;
+#include "Error.hpp"
 
 using std::vector;
 using std::max;
