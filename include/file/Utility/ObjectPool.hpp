@@ -4,52 +4,56 @@
 #include <algorithm>
 #include <cstdint>
 #include <new>
-#include "ERROR.hpp"
+#include <iostream>
+
+#define ERROR(type,info) std::cerr << "[ERROR][" << type << "]file:" << __FILE__ << ";line:" << __LINE__ << "|info:" << info << std::endl;
+
 using std::vector;
 using std::max;
 
 namespace Engine
 {
-    template<typename Type, size_t N>
-    struct obj_block
-    {
-        union block
-        {
-            Type* ptr;
-            Type obj;
-        } data[N];
-    };
-
-    template<typename Type, size_t N = 32>
+    template<typename Type, size_t blockSize>
     class ObjectPool
     {
     private:
-        std::vector<obj_block<Type,N>*> blockPointers;
+        struct obj_block
+        {
+            union block
+            {
+                Type* ptr;
+                Type obj;
+            } data[blockSize];
+        };
+
+        std::vector<obj_block*> blockPointers;
         Type* nullobjRoot;
         Type* nullobjBack;
     public:
         ObjectPool(size_t init_blocks)
         {
-            init_blocks = max(init_blocks,1UL);
-            obj_block<Type,N>* ptr;
+            init_blocks = max(init_blocks,(size_t)1);
+            obj_block* ptr;
+            blockPointers.resize(init_blocks);
             size_t i,j;
             for (i = 0; i < init_blocks; i++)
             {
-                ptr = new obj_block<Type,N>();
+                ptr = new obj_block();
                 if (ptr == nullptr)
                 {
                     ERROR("MEMORY","内存耗尽!")
                 }
-                blockPointers.push_back(ptr);
+                blockPointers[i] = ptr;
             }
-            std::sort(blockPointers.begin(),blockPointers.back());
-            Type** tmp, last = &nullobjRoot;
+            std::sort(blockPointers.begin(),blockPointers.end(),std::greater<obj_block*>());
+
+            Type** tmp, **last = &nullobjRoot;
             for (i = 0; i < init_blocks; i++)
             {
                 ptr = blockPointers[i];
-                for (j = 0; j < N; j++)
+                for (j = 0; j < blockSize; j++)
                 {
-                    tmp = &ptr->data[j].ptr;
+                    tmp = &(ptr->data[j].ptr);
                     *last = (Type*)tmp;
                     last = tmp;
                 }
@@ -73,17 +77,19 @@ namespace Engine
         }
         void alloc_block()
         {
-            obj_block<Type,N>* ptr = new obj_block<Type,N>();
+            obj_block* ptr = new obj_block();
             if (ptr == nullptr)
             {
                 ERROR("MEMORY","内存耗尽!")
             }
             blockPointers.push_back(ptr);
-            std::sort(blockPointers.begin(),blockPointers.back());
-            Type** tmp, last = &nullobjBack;
-            for (j = 0; j < N; j++)
+            std::sort(blockPointers.begin(),blockPointers.end(),std::greater<obj_block*>());
+
+            *(Type**)nullobjBack = (Type*)&(ptr->data[0].ptr);
+            Type** tmp, **last = &(ptr->data[0].ptr);
+            for (size_t j = 1; j < blockSize; j++)
             {
-                tmp = &ptr->data[j].ptr;
+                tmp = &(ptr->data[j].ptr);
                 *last = (Type*)tmp;
                 last = tmp;
             }

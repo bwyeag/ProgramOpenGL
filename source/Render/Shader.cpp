@@ -10,7 +10,7 @@ namespace Engine::Render
         if (!reader.is_open())
         {
             this->shader_id = 0;
-            ERROR("Engine","[ERROR]未能成功打开文件：")
+            ERROR("Engine","未能成功打开文件：")
             ERRORINFO(path)
             return;
         }
@@ -29,12 +29,12 @@ namespace Engine::Render
         {
             int length;
             glGetShaderiv(this->shader_id, GL_INFO_LOG_LENGTH, &length);
-            ERROR("OpenGL","[ERROR]着色器编译失败:\n着色器文件:")
+            ERROR("OpenGL","着色器编译失败:\n着色器文件:")
             ERRORINFO(shader_code << "\n----------------------------------------")
             char* log = (char*)malloc(sizeof(char) * length);
             if (log == nullptr)
             {
-                ERROR("OpenGL","[ERROR]日志内存申请失败")
+                ERROR("OpenGL","日志内存申请失败")
                 throw std::bad_alloc();
             }
             else
