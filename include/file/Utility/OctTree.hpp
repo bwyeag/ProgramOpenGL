@@ -3,7 +3,7 @@
 #include "type_load.hpp"
 #include "EnclosureBox.hpp"
 #include "ObjectPool.hpp"
-#define TREE_VECTOR_MIN_COUNT 16
+#include <new>
 #define TREE_MAX 512.0f
 
 namespace Engine
@@ -12,6 +12,10 @@ namespace Engine
     class OctTree
     {
     private:
+        enum NodeType
+        {
+            Leaf = 0xFFU,Node = 0x00U
+        };
         /// @brief 八叉树节点
         struct node
         {
@@ -29,14 +33,17 @@ namespace Engine
             }children[8];
             /// @brief 包围盒
             axis_collision box;
+        public:
+            inline node(node* f = nullptr, NodeType t = NodeType::Node, const axis_collision& c = {{-TREE_MAX,-TREE_MAX,-TREE_MAX},{TREE_MAX,TREE_MAX,TREE_MAX}})
+                :father(f),code(t==NodeType::Node?0x0000000000000000UL,0xFF00000000000000UL),box(c) {}
 
             inline bool isLeaf() const
             {
-                return ((this->code & 0xFF00000000000000) == 0xFF00000000000000);
+                return ((this->code & 0xFF00000000000000UL) == 0xFF00000000000000UL);
             }
             inline bool isNode() const
             {
-                return ((this->code & 0xFF00000000000000) == 0x0000000000000000);
+                return ((this->code & 0xFF00000000000000UL) == 0x0000000000000000UL);
             }
             inline bool isFull() const
             {
@@ -44,7 +51,17 @@ namespace Engine
             }
             inline uint8_t getChildCount() const
             {
-                return static_cast<uint8_t>(this->code & 0x00000000000000FF);
+                return static_cast<uint8_t>(this->code & 0x00000000000000FFUL);
+            }
+            inline void setToNode()
+            {
+                code &= 0x00FFFFFFFFFFFFFFUL;
+                return;
+            }
+            inline void setToLeaf()
+            {
+                code |= 0xFF00000000000000UL;
+                return;
             }
             inline void addChild(uint64_t child)
             {
@@ -59,8 +76,9 @@ namespace Engine
                 this->code++;
                 return;
             }
-        };
 
+        };
+    public:
         /// @brief 八叉数物件
         struct object
         {
@@ -68,14 +86,26 @@ namespace Engine
             axis_collision box;
             Type data;
         };
-
-        ObjectPool<node, N> node_data;
-        ObjectPool<object, N> obj_data;
-        node* node_root;
+    private:
+        ObjectPool<node, N> nodeData;
+        ObjectPool<object, N> objData;
+        node* nodeRoot;
     public:
-        OctTree(size_t init_blocks) : node_data(init_blocks), obj_data(init_blocks)
+        OctTree(size_t init_blocks) : nodeData(init_blocks), objData(init_blocks)
         {
-            node_root = node_data.allocate()
+            nodeRoot = new(node_data.allocate()) node();
+        }
+
+        object* AddObject(const axis_collision& ac)
+        {
+            if (IntersectTest(ac,nodeRoot->box))
+            {
+                
+            }
+            else
+            {
+                ERROR("OctTree","物体未处于树中")
+            }
         }
     };
 } // namespace Engine
